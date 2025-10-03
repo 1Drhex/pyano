@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Piano Generator</title>
+  <title>Piano Generator with Shifting</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex flex-col items-center p-6 space-y-6">
@@ -13,9 +13,16 @@
   <canvas id="piano" width="1120" height="200" class="border rounded shadow-lg bg-white"></canvas>
 
   <!-- Controls -->
-  <div class="w-full max-w-4xl grid grid-cols-7 gap-4">
-    <!-- Dynamic color pickers will be inserted here -->
-    <div id="controls" class="col-span-7 flex flex-wrap gap-4 justify-center"></div>
+  <div id="controls" class="w-full max-w-5xl flex flex-wrap gap-4 justify-center"></div>
+
+  <!-- Interval Shift -->
+  <div class="flex items-center gap-2">
+    <label class="font-medium">Shift by semitones:</label>
+    <input id="shiftAmount" type="number" value="1" min="-12" max="12" class="w-16 border rounded px-2 py-1 text-center">
+    <button id="shiftBtn" 
+            class="px-3 py-1 bg-green-600 text-white rounded-lg shadow hover:bg-green-700">
+      🔀 Shift Colors
+    </button>
   </div>
 
   <!-- Download -->
@@ -39,8 +46,6 @@ function drawPiano(canvasId, numOctaves = 4, highlight = {}, showLabels = true) 
   const ctx = canvas.getContext("2d");
 
   let whiteIndex = 0;
-
-  // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // White keys
@@ -82,18 +87,30 @@ function drawPiano(canvasId, numOctaves = 4, highlight = {}, showLabels = true) 
   }
 }
 
+// -------- NOTE SYSTEM --------
+const chromatic = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function noteToIndex(note) {
+  return chromatic.indexOf(note.replace(/[0-9]/g, ""));
+}
+function shiftNote(note, shift) {
+  const octave = parseInt(note.replace(/[^0-9]/g, ""), 10);
+  const base = note.replace(/[0-9]/g, "");
+  let idx = (noteToIndex(base) + shift + 12) % 12;
+  let newOctave = octave + Math.floor((noteToIndex(base) + shift) / 12);
+  return chromatic[idx] + newOctave;
+}
+
 // -------- INTERACTIVE UI --------
 const notes = [];
 for (let octave = 1; octave <= 4; octave++) {
-  ["C","D","E","F","G","A","B","C#","D#","F#","G#","A#"].forEach(n => {
-    notes.push(n + octave);
-  });
+  chromatic.forEach(n => notes.push(n + octave));
 }
 
-const highlight = {};
+let highlight = {};
 const controlsDiv = document.getElementById("controls");
 
 // Build color pickers
+const inputs = {};
 notes.forEach(note => {
   const wrapper = document.createElement("div");
   wrapper.className = "flex flex-col items-center";
@@ -115,12 +132,30 @@ notes.forEach(note => {
   wrapper.appendChild(input);
   wrapper.appendChild(label);
   controlsDiv.appendChild(wrapper);
+  inputs[note] = input;
 });
 
 // Initial draw
 drawPiano("piano", 4, highlight, true);
 
-// Download button
+// Shift colors
+document.getElementById("shiftBtn").addEventListener("click", () => {
+  const amount = parseInt(document.getElementById("shiftAmount").value, 10) || 0;
+  let newHighlight = {};
+  for (let note in highlight) {
+    newHighlight[shiftNote(note, amount)] = highlight[note];
+  }
+  highlight = newHighlight;
+
+  // Update pickers too
+  for (let note in inputs) {
+    inputs[note].value = highlight[note] || (note.includes("#") ? "#000000" : "#ffffff");
+  }
+
+  drawPiano("piano", 4, highlight, true);
+});
+
+// Download
 document.getElementById("downloadBtn").addEventListener("click", () => {
   const canvas = document.getElementById("piano");
   const link = document.createElement("a");
@@ -129,6 +164,5 @@ document.getElementById("downloadBtn").addEventListener("click", () => {
   link.click();
 });
 </script>
-
 </body>
 </html>
