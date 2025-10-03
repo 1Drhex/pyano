@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Piano Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex flex-col items-center p-6 space-y-6">
+
+  <h1 class="text-2xl font-bold">🎹 Piano Key Highlighter</h1>
+
+  <!-- Canvas -->
+  <canvas id="piano" width="1120" height="200" class="border rounded shadow-lg bg-white"></canvas>
+
+  <!-- Controls -->
+  <div class="w-full max-w-4xl grid grid-cols-7 gap-4">
+    <!-- Dynamic color pickers will be inserted here -->
+    <div id="controls" class="col-span-7 flex flex-wrap gap-4 justify-center"></div>
+  </div>
+
+  <!-- Download -->
+  <button id="downloadBtn" 
+          class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg shadow hover:bg-blue-700">
+    ⬇️ Download Piano Image
+  </button>
+
+<script>
+function drawPiano(canvasId, numOctaves = 4, highlight = {}, showLabels = true) {
+  const whiteKeyWidth = 40;
+  const whiteKeyHeight = 200;
+  const blackKeyWidth = 25;
+  const blackKeyHeight = 120;
+
+  const whiteKeyNames = ["C", "D", "E", "F", "G", "A", "B"];
+  const blackKeyNames = ["C#", "D#", "F#", "G#", "A#"];
+  const blackKeyOffsets = [0.7, 1.7, 3.7, 4.7, 5.7];
+
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext("2d");
+
+  let whiteIndex = 0;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // White keys
+  for (let octave = 1; octave <= numOctaves; octave++) {
+    for (let i = 0; i < whiteKeyNames.length; i++) {
+      const note = whiteKeyNames[i] + octave;
+      const x = whiteIndex * whiteKeyWidth;
+      ctx.fillStyle = highlight[note] || "white";
+      ctx.fillRect(x, 0, whiteKeyWidth, whiteKeyHeight);
+      ctx.strokeRect(x, 0, whiteKeyWidth, whiteKeyHeight);
+
+      if (showLabels) {
+        ctx.fillStyle = "black";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(note, x + whiteKeyWidth / 2, whiteKeyHeight - 10);
+      }
+
+      whiteIndex++;
+    }
+  }
+
+  // Black keys
+  for (let octave = 1; octave <= numOctaves; octave++) {
+    for (let i = 0; i < blackKeyNames.length; i++) {
+      const note = blackKeyNames[i] + octave;
+      const x = ((octave - 1) * 7 + blackKeyOffsets[i]) * whiteKeyWidth;
+      ctx.fillStyle = highlight[note] || "black";
+      ctx.fillRect(x, 0, blackKeyWidth, blackKeyHeight);
+      ctx.strokeRect(x, 0, blackKeyWidth, blackKeyHeight);
+
+      if (showLabels) {
+        ctx.fillStyle = "white";
+        ctx.font = "10px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(note, x + blackKeyWidth / 2, blackKeyHeight - 5);
+      }
+    }
+  }
+}
+
+// -------- INTERACTIVE UI --------
+const notes = [];
+for (let octave = 1; octave <= 4; octave++) {
+  ["C","D","E","F","G","A","B","C#","D#","F#","G#","A#"].forEach(n => {
+    notes.push(n + octave);
+  });
+}
+
+const highlight = {};
+const controlsDiv = document.getElementById("controls");
+
+// Build color pickers
+notes.forEach(note => {
+  const wrapper = document.createElement("div");
+  wrapper.className = "flex flex-col items-center";
+
+  const input = document.createElement("input");
+  input.type = "color";
+  input.value = (note.includes("#")) ? "#000000" : "#ffffff";
+  input.className = "w-12 h-12 border rounded cursor-pointer";
+
+  input.addEventListener("input", () => {
+    highlight[note] = input.value;
+    drawPiano("piano", 4, highlight, true);
+  });
+
+  const label = document.createElement("label");
+  label.innerText = note;
+  label.className = "text-xs mt-1";
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(label);
+  controlsDiv.appendChild(wrapper);
+});
+
+// Initial draw
+drawPiano("piano", 4, highlight, true);
+
+// Download button
+document.getElementById("downloadBtn").addEventListener("click", () => {
+  const canvas = document.getElementById("piano");
+  const link = document.createElement("a");
+  link.download = "piano.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+});
+</script>
+
+</body>
+</html>
